@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P2P File Transfer</title>
-    <link href="style.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <h1>P2P File Transfer</h1>
@@ -18,7 +18,7 @@
 </div>
 
 <div id="file-transfer">
-    <input id="fileInput" multiple type="file">
+    <input type="file" id="fileInput" multiple>
     <button id="sendButton">Send File</button>
 </div>
 
@@ -27,8 +27,7 @@
 <!-- Received Files Section -->
 <div id="receivedFiles">
     <h2>Received Files:</h2>
-    <ul
-            id="fileList"></ul>
+    <ul id="fileList"></ul>
     <button id="saveSelectedButton">Save Selected</button>
 </div>
 

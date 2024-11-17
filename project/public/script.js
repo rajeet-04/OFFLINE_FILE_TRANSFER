@@ -1,6 +1,6 @@
 const socket = io();
 
-//HTML elements
+// HTML elements
 const clientIdDisplay = document.getElementById('clientId');
 const clientsList = document.getElementById('clientsList');
 const fileInput = document.getElementById('fileInput');
@@ -10,24 +10,32 @@ const messages = document.getElementById('messages');
 let localConnection;
 let dataChannel;
 let selectedClientId = null;
-
-//Store connected clients
 let clients = {};
-let receivedFilesCache = []; // Store received files temporarily
-let isFirstFile = true; // Flag to skip the first dummy file
+let receivedFilesCache = [];
+let receivingFileMetadata = true;
+let fileBuffer = [];
+let fileName = '';
+let fileSize = 0;
+let totalReceived = 0;
+
+// Utility function to log messages
+function logMessage(message) {
+    messages.value += `${message}\n`;
+    messages.scrollTop = messages.scrollHeight; // Auto-scroll to the bottom
+}
 
 // Display own client ID
 socket.on('connect', () => {
     clientIdDisplay.textContent = socket.id;
+    logMessage(`Connected with ID: ${socket.id}`);
 });
 
-//Update the list of connected clients
+// Update the list of connected clients
 socket.on('clients', (clientList) => {
     clients = clientList;
     updateClientsList();
 });
 
-//Update client list buttons
 function updateClientsList() {
     clientsList.innerHTML = '<h2>Available Clients:</h2>';
     for (const id in clients) {
@@ -40,16 +48,14 @@ function updateClientsList() {
     }
 }
 
-//Handle connection
 async function connectToClient(clientId) {
     selectedClientId = clientId;
     setupConnection();
 }
 
-//WebRTC
 async function setupConnection() {
     if (selectedClientId) {
-        lolConnection = new RTCPeerConnection();
+        localConnection = new RTCPeerConnection();
         dataChannel = localConnection.createDataChannel('fileTransfer');
 
         dataChannel.onopen = () => logMessage("Connection opened");
@@ -59,31 +65,32 @@ async function setupConnection() {
         localConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 socket.emit('ice-candidate', {target: selectedClientId, candidate: event.candidate});
+                logMessage("ICE candidate sent");
             }
         };
 
         const offer = await localConnection.createOffer();
         await localConnection.setLocalDescription(offer);
         socket.emit('offer', {target: selectedClientId, offer});
+        logMessage("SDP offer sent");
     }
 }
 
-//incoming SDP
 socket.on('offer', async (data) => {
     const {sender, offer} = data;
     selectedClientId = sender;
-
     localConnection = new RTCPeerConnection();
+
     localConnection.ondatachannel = (event) => {
         dataChannel = event.channel;
         dataChannel.onmessage = handleReceiveMessage;
-        dataChannel.onopen = () => logMessage("Connection opened");
-        dataChannel.onclose = () => logMessage("Connection closed");
+        logMessage("Data channel received");
     };
 
     localConnection.onicecandidate = (event) => {
         if (event.candidate) {
             socket.emit('ice-candidate', {target: sender, candidate: event.candidate});
+            logMessage("ICE candidate sent");
         }
     };
 
@@ -91,137 +98,112 @@ socket.on('offer', async (data) => {
     const answer = await localConnection.createAnswer();
     await localConnection.setLocalDescription(answer);
     socket.emit('answer', {target: sender, answer});
+    logMessage("SDP answer sent");
 });
 
 socket.on('answer', async (data) => {
-    const {answer} = data;
-    await localConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    await localConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    logMessage("SDP answer received");
 });
 
 socket.on('ice-candidate', async (data) => {
-    const {candidate} = data;
-    if (candidate) {
-        await localConnection.addIceCandidate(candidate);
+    if (data.candidate) {
+        await localConnection.addIceCandidate(data.candidate);
+        logMessage("ICE candidate received");
     }
 });
 
-//Send a file to the client
 sendButton.onclick = async () => {
     if (dataChannel && dataChannel.readyState === 'open' && fileInput.files.length > 0) {
         const file = fileInput.files[0];
-
-        //Send file name & data
-        const metadata = {
-            fileName: file.name, // Include the original file name
-            fileSize: file.size
-        };
-
-        //READ FILE
-        const reader = file.stream().getReader();
-        let loaded = 0;
-
-        //send metadata
+        const metadata = {fileName: file.name, fileSize: file.size};
         dataChannel.send(JSON.stringify(metadata));
+        logMessage(`Sending file: ${file.name}`);
 
-        //send the file in chunks
+        receivingFileMetadata = true;
+
+        const reader = file.stream().getReader();
         while (true) {
             const {done, value} = await reader.read();
             if (done) break;
+            if (dataChannel.bufferedAmount > 16 * 1024) await new Promise(r => setTimeout(r, 10));
             dataChannel.send(value);
-            loaded += value.length;
         }
-        logMessage(`File sent: ${file.name}`);
+        logMessage("File sent successfully");
     }
 };
 
-let fileBuffer = [];
-let receivingFileMetadata = false;
-let fileName = '';
-let fileSize = 0;
-let totalReceived = 0;
-
 function handleReceiveMessage(event) {
-    const {data} = event;
-
-    if (isFirstFile) {
-        //Skip processing the first file (dummy or initial file)
-        logMessage("Received first file, skipping processing.");
-        isFirstFile = false; // After the first file, treat subsequent files normally
-        return;
-    }
-
+    // Check if the incoming data is metadata (JSON) or actual file data (ArrayBuffer)
     if (receivingFileMetadata) {
-        //Metadata file
-        const metadata = JSON.parse(data);
-        fileName = metadata.fileName;
-        fileSize = metadata.fileSize;
-        totalReceived = 0;
-        fileBuffer = [];
-        receivingFileMetadata = false;
-    } else if (data instanceof ArrayBuffer) {
-        //receive & buffer
-        totalReceived += data.byteLength;
-        fileBuffer.push(data);
+        try {
+            const metadata = JSON.parse(event.data); // Parse metadata JSON
+            fileName = metadata.fileName;
+            fileSize = metadata.fileSize;
+            logMessage(`Receiving file: ${fileName} (${fileSize} bytes)`);
 
+            // Initialize variables for receiving the file
+            receivingFileMetadata = false;
+            fileBuffer = [];
+            totalReceived = 0;
+        } catch (error) {
+            logMessage("Error parsing metadata");
+        }
+    } else if (event.data instanceof ArrayBuffer) {
+        // Handle file chunk data
+        fileBuffer.push(event.data);
+        totalReceived += event.data.byteLength;
+        logMessage(`Receiving data... (${totalReceived}/${fileSize} bytes)`);
+
+        // Check if the entire file is received
         if (totalReceived >= fileSize) {
-            //create blob
             const completeFile = new Blob(fileBuffer);
             fileBuffer = [];
             receivingFileMetadata = true; // Ready for the next file
 
-            //Store the received file in cache
-            receivedFilesCache.push({fileName, file: completeFile});
+            // Store the received file in the cache
+            receivedFilesCache.push({ fileName, file: completeFile });
+            logMessage(`File received: ${fileName}`);
 
-            //Update the UI
+            // Update the received files list in the UI
             updateReceivedFilesList();
         }
     }
 }
 
-//Update the received files
+
 function updateReceivedFilesList() {
     const fileList = document.getElementById('fileList');
     fileList.innerHTML = ''; // Clear existing list
 
-    //Add received files
+    // Add received files to the list
     receivedFilesCache.forEach((fileObj, index) => {
         const listItem = document.createElement('li');
+
+        // Add checkbox for each file
         listItem.innerHTML = `
-            <input type="checkbox" class="fileCheckbox" data-index="${index}"> 
-            ${fileObj.fileName}
+            <input type="checkbox" class="fileCheckbox" data-index="${index}">
+            <span>${fileObj.fileName}</span>
         `;
+
         fileList.appendChild(listItem);
     });
+
+    logMessage("Updated received files list");
 }
 
-// Save selected files to disk
-document.getElementById('saveSelectedButton').onclick = () => {
-    const selectedCheckboxes = document.querySelectorAll('.fileCheckbox:checked');
+document.getElementById('saveSelectedButton').addEventListener('click', () => {
+    const checkboxes = document.querySelectorAll('.fileCheckbox:checked'); // Get all checked checkboxes
+    checkboxes.forEach((checkbox) => {
+        const index = checkbox.getAttribute('data-index'); // Get the index of the checked file
+        const fileObj = receivedFilesCache[index]; // Retrieve the file object from the cache
 
-    selectedCheckboxes.forEach(checkbox => {
-        const fileIndex = checkbox.getAttribute('data-index');
-        const fileObj = receivedFilesCache[fileIndex];
+        // Create a download link for the file
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(fileObj.file); // Create an object URL for the file
+        downloadLink.download = fileObj.fileName; // Set the file name for downloading
+        downloadLink.click(); // Trigger the download
 
-        downloadFile(fileObj.file, fileObj.fileName);
+        logMessage(`Downloading: ${fileObj.fileName}`); // Log the download action
     });
-
-    logMessage(`${selectedCheckboxes.length} file(s) saved.`);
-};
-
-//trigger download
-function downloadFile(blob, fileName) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName; // Ensure original file name with extension
-    link.style.display = 'none';  // Hide the link
-    document.body.appendChild(link); // Append the link to the body
-    link.click();  // Trigger the download
-    document.body.removeChild(link);  // Clean up the link element
-    logMessage(`File received and downloaded: ${fileName}`);
-}
-
-
-function logMessage(message) {
-    messages.value += message + '\n';
-}
+});
