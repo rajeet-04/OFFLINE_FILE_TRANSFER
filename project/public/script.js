@@ -58,19 +58,19 @@ async function setupConnection() {
 
         localConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                socket.emit('ice-candidate', { target: selectedClientId, candidate: event.candidate });
+                socket.emit('ice-candidate', {target: selectedClientId, candidate: event.candidate});
             }
         };
 
         const offer = await localConnection.createOffer();
         await localConnection.setLocalDescription(offer);
-        socket.emit('offer', { target: selectedClientId, offer });
+        socket.emit('offer', {target: selectedClientId, offer});
     }
 }
 
 //incoming SDP
 socket.on('offer', async (data) => {
-    const { sender, offer } = data;
+    const {sender, offer} = data;
     selectedClientId = sender;
 
     localConnection = new RTCPeerConnection();
@@ -83,23 +83,23 @@ socket.on('offer', async (data) => {
 
     localConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
+            socket.emit('ice-candidate', {target: sender, candidate: event.candidate});
         }
     };
 
     await localConnection.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await localConnection.createAnswer();
     await localConnection.setLocalDescription(answer);
-    socket.emit('answer', { target: sender, answer });
+    socket.emit('answer', {target: sender, answer});
 });
 
 socket.on('answer', async (data) => {
-    const { answer } = data;
+    const {answer} = data;
     await localConnection.setRemoteDescription(new RTCSessionDescription(answer));
 });
 
 socket.on('ice-candidate', async (data) => {
-    const { candidate } = data;
+    const {candidate} = data;
     if (candidate) {
         await localConnection.addIceCandidate(candidate);
     }
@@ -125,7 +125,7 @@ sendButton.onclick = async () => {
 
         //send the file in chunks
         while (true) {
-            const { done, value } = await reader.read();
+            const {done, value} = await reader.read();
             if (done) break;
             dataChannel.send(value);
             loaded += value.length;
@@ -141,7 +141,7 @@ let fileSize = 0;
 let totalReceived = 0;
 
 function handleReceiveMessage(event) {
-    const { data } = event;
+    const {data} = event;
 
     if (isFirstFile) {
         //Skip processing the first file (dummy or initial file)
@@ -170,7 +170,7 @@ function handleReceiveMessage(event) {
             receivingFileMetadata = true; // Ready for the next file
 
             //Store the received file in cache
-            receivedFilesCache.push({ fileName, file: completeFile });
+            receivedFilesCache.push({fileName, file: completeFile});
 
             //Update the UI
             updateReceivedFilesList();
