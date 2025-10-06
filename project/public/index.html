@@ -3,35 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P File Transfer</title>
+    <title>QR-Connect File Share</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>P2P File Transfer</h1>
+<h1>QR-Connect File Share</h1>
 
-<!-- Display own client ID -->
-<div id="clientIdDisplay">Your ID: <span id="clientId"></span></div>
-
-<!-- Buttons to connect to other clients -->
-<div id="clientsList">
-    <h2>Available Clients:</h2>
+<!-- Mode Selection -->
+<div id="modeSelection" class="container">
+    <h2>Choose Your Mode</h2>
+    <button id="senderBtn" class="mode-btn">Start Sending</button>
+    <button id="receiverBtn" class="mode-btn">Receive File</button>
 </div>
 
-<div id="file-transfer">
-    <input type="file" id="fileInput" multiple>
-    <button id="sendButton">Send File</button>
+<!-- Sender View -->
+<div id="senderView" class="container hidden">
+    <h2>Send Files</h2>
+    <div id="senderSteps">
+        <!-- Step 1: Generate Offer QR -->
+        <div id="senderStep1" class="step">
+            <h3>Step 1: Show this QR code to the receiver</h3>
+            <div id="offerQRCode"></div>
+            <p class="instruction">Waiting for receiver to scan...</p>
+        </div>
+        
+        <!-- Step 2: Scan Answer QR -->
+        <div id="senderStep2" class="step hidden">
+            <h3>Step 2: Scan the receiver's QR code</h3>
+            <div id="senderScanner"></div>
+            <button id="startSenderScan" class="action-btn">Start Camera</button>
+        </div>
+        
+        <!-- Step 3: Send Files -->
+        <div id="senderStep3" class="step hidden">
+            <h3>Step 3: Select and send files</h3>
+            <p class="status">✓ Connected</p>
+            <input type="file" id="fileInput" multiple>
+            <button id="sendButton" class="action-btn">Send File</button>
+            <div id="sendProgress"></div>
+        </div>
+    </div>
+    <button id="resetSender" class="reset-btn">Start Over</button>
 </div>
 
-<textarea id="messages" placeholder="Messages will appear here..." readonly></textarea>
-
-<!-- Received Files Section -->
-<div id="receivedFiles">
-    <h2>Received Files:</h2>
-    <ul id="fileList"></ul>
-    <button id="saveSelectedButton">Save Selected</button>
+<!-- Receiver View -->
+<div id="receiverView" class="container hidden">
+    <h2>Receive Files</h2>
+    <div id="receiverSteps">
+        <!-- Step 1: Scan Offer QR -->
+        <div id="receiverStep1" class="step">
+            <h3>Step 1: Scan the sender's QR code</h3>
+            <div id="receiverScanner"></div>
+            <button id="startReceiverScan" class="action-btn">Start Camera</button>
+        </div>
+        
+        <!-- Step 2: Show Answer QR -->
+        <div id="receiverStep2" class="step hidden">
+            <h3>Step 2: Show this QR code to the sender</h3>
+            <div id="answerQRCode"></div>
+            <p class="instruction">Waiting for sender to scan...</p>
+        </div>
+        
+        <!-- Step 3: Receive Files -->
+        <div id="receiverStep3" class="step hidden">
+            <h3>Step 3: Receive files</h3>
+            <p class="status">✓ Connected</p>
+            <div id="receiveProgress"></div>
+            <div id="receivedFiles">
+                <h4>Received Files:</h4>
+                <ul id="fileList"></ul>
+                <button id="saveSelectedButton" class="action-btn">Save Selected</button>
+            </div>
+        </div>
+    </div>
+    <button id="resetReceiver" class="reset-btn">Start Over</button>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
+<!-- Messages/Logs -->
+<div id="logContainer" class="container">
+    <textarea id="messages" placeholder="Status messages will appear here..." readonly></textarea>
+</div>
+
+<script src="/node_modules/qrcode-generator/dist/qrcode.js"></script>
+<script src="/node_modules/html5-qrcode/html5-qrcode.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

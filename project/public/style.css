@@ -3,52 +3,162 @@ body {
     text-align: center;
     padding: 20px;
     background-color: #f5f5f5;
+    margin: 0;
 }
 
-#file-transfer {
-    margin-bottom: 20px;
+h1 {
+    color: #333;
+    margin-bottom: 30px;
 }
 
-textarea, input {
-    width: 80%;
-    padding: 10px;
-    margin-top: 10px;
+.container {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    margin: 20px auto;
+    max-width: 600px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-button {
-    margin-top: 10px;
-    padding: 10px;
+.hidden {
+    display: none !important;
+}
+
+/* Mode Selection */
+.mode-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 18px;
+    margin: 10px;
+    border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-#progress {
+.mode-btn:hover {
+    background-color: #45a049;
+}
+
+/* Steps */
+.step {
+    margin: 20px 0;
+}
+
+.step h3 {
+    color: #555;
+    margin-bottom: 15px;
+}
+
+.instruction {
+    color: #666;
+    font-style: italic;
+    margin-top: 10px;
+}
+
+.status {
+    color: #4CAF50;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+/* QR Code display */
+#offerQRCode, #answerQRCode {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+#offerQRCode canvas, #answerQRCode canvas {
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+    background: white;
+}
+
+/* Scanner */
+#senderScanner, #receiverScanner {
+    margin: 20px auto;
+    max-width: 400px;
+}
+
+/* Buttons */
+.action-btn {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-size: 16px;
+    margin: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.action-btn:hover {
+    background-color: #0b7dda;
+}
+
+.reset-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
     margin-top: 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
+.reset-btn:hover {
+    background-color: #da190b;
+}
+
+/* File Input */
+input[type="file"] {
+    margin: 20px 0;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    background: white;
+}
+
+/* Progress */
+#sendProgress, #receiveProgress {
+    margin: 15px 0;
+    font-weight: bold;
+    color: #2196F3;
+    min-height: 20px;
+}
+
+/* Received Files */
 #receivedFiles {
     margin-top: 20px;
-    margin-left: 5%;
-    width: 31%;
+    text-align: left;
+}
+
+#receivedFiles h4 {
+    color: #555;
+    margin-bottom: 10px;
 }
 
 #fileList {
     list-style: none;
-    padding-left: 0;
-    margin-top: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 0;
+    margin: 10px 0;
 }
 
 #fileList li {
     display: flex;
     align-items: center;
     margin: 10px 0;
-    width: 100%;
+    padding: 10px;
     background-color: #f9f9f9;
-    padding: 8px;
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s;
 }
 
 #fileList li:hover {
@@ -58,6 +168,8 @@ button {
 #fileList input[type="checkbox"] {
     margin-right: 10px;
     cursor: pointer;
+    width: 18px;
+    height: 18px;
 }
 
 #fileList span {
@@ -67,6 +179,38 @@ button {
     font-size: 1rem;
 }
 
-button:hover, input[type="checkbox"]:hover {
-    background-color: #f0f0f0;
+/* Messages/Logs */
+#logContainer {
+    max-width: 800px;
+}
+
+textarea {
+    width: 100%;
+    height: 150px;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 12px;
+    resize: vertical;
+    background: #fafafa;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .mode-btn {
+        display: block;
+        width: 100%;
+        margin: 10px 0;
+    }
+    
+    #offerQRCode canvas, #answerQRCode canvas {
+        max-width: 100%;
+        height: auto;
+    }
 }
